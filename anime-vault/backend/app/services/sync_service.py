@@ -230,6 +230,14 @@ class SyncService:
         infobox = data.get("infobox", [])
         tags = data.get("tags", [])
 
+        # The detail endpoint calls this field air_date, while the ranking list
+        # endpoint calls the same thing date. Accept either, then derive the year
+        # from it because the ranking response carries no year of its own.
+        air_date = self._parse_date(data.get("air_date") or data.get("date"))
+        year = data.get("year")
+        if year is None and air_date is not None:
+            year = air_date.year
+
         return AnimeSubject(
             bgm_id=data.get("id", 0),
             name=data.get("name", ""),
@@ -240,10 +248,10 @@ class SyncService:
             platform=data.get("platform"),
             total_episodes=data.get("eps", 0),
             status=data.get("status"),
-            air_date=self._parse_date(data.get("air_date")),
+            air_date=air_date,
             end_date=self._parse_date(data.get("end_date")),
             season=data.get("season"),
-            year=data.get("year"),
+            year=year,
             rating_score=round(rating.get("score", 0) * 10) if rating.get("score") else None,
             rating_rank=rating.get("rank"),
             rating_total=rating.get("total"),

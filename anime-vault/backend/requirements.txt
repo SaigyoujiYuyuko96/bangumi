@@ -22,3 +22,9 @@ langgraph>=0.2.50
 openai>=1.43.1
 tiktoken>=0.7.0
 
+# Semantic search: vector index is a rebuildable cache over the relational
+# store, see docs/adr/0001-retrieval-index-is-a-cache.md. fastembed pulls the
+# Chinese embedding model and runs it on onnxruntime, so no GPU or torch.
+chromadb==1.5.9
+fastembed==0.9.1
+

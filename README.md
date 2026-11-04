@@ -1,5 +1,7 @@
 # Bangumi Anime Vault
 
+[![CI](https://github.com/SaigyoujiYuyuko96/bangumi/actions/workflows/test.yml/badge.svg)](https://github.com/SaigyoujiYuyuko96/bangumi/actions/workflows/test.yml)
+
 一个动漫知识库 + 智能问答的全栈项目。数据来自 [Bangumi.tv](https://bgm.tv)，后端 FastAPI，前端 React，检索用的是**向量语义搜索**而不是标题关键词。
 
 [English](#english) · [架构](#架构) · [跑起来](#本地跑起来) · [检索效果](#检索效果为什么值得看)

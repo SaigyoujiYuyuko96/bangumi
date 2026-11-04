@@ -3,18 +3,22 @@ import { Send, Sparkles, Plus, Trash2, MessageSquare, Menu, X, Bot, User } from 
 import { useChatStore } from '@/stores/chat'
 import { sendMessage, sendMessageStream, getSessions, deleteSession, ChatSession } from '@/services/chat'
 import { useAuthStore } from '@/stores/auth'
+import MarkdownText from '@/components/MarkdownText'
 import { Link } from 'react-router-dom'
 
 export default function ChatPage() {
-  const { messages, isLoading, addMessage, setLoading, sessionId, setSessionId, clearMessages } = useChatStore()
+  const { messages, isLoading, addMessage, appendAssistantChunk, setLoading, sessionId, setSessionId, clearMessages } = useChatStore()
   const { isAuthenticated } = useAuthStore()
   const [input, setInput] = useState('')
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesBoxRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    // Scroll the message list itself. scrollIntoView would also scroll every
+    // ancestor, dragging the whole page up under the sticky header.
+    const box = messagesBoxRef.current
+    if (box) box.scrollTop = box.scrollHeight
   }
 
   useEffect(() => {
@@ -53,12 +57,9 @@ export default function ChatPage() {
         sessionId || undefined,
         (chunk) => {
           assistantMessage += chunk
-          const lastIndex = messages.length
-          if (lastIndex > 0 && messages[lastIndex - 1].role === 'assistant') {
-            messages[lastIndex - 1].content = assistantMessage
-          } else {
-            addMessage('assistant', chunk)
-          }
+          // Appending through the store keeps the bubble in sync with the latest
+          // state; mutating the messages array captured by this render does not.
+          appendAssistantChunk(chunk)
         },
         (fullMessage, sessId) => {
           setSessionId(sessId)
@@ -202,7 +203,7 @@ export default function ChatPage() {
           </p>
         </div>
 
-        <div className="flex-1 overflow-y-auto rounded-xl border border-border bg-card p-4 mb-4 space-y-4">
+        <div ref={messagesBoxRef} className="flex-1 overflow-y-auto rounded-xl border border-border bg-card p-4 mb-4 space-y-4">
           {messages.length === 0 && (
             <div className="text-center py-12">
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
@@ -245,7 +246,10 @@ export default function ChatPage() {
                     : 'bg-secondary text-secondary-foreground rounded-bl-sm'
                 }`}
               >
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                <MarkdownText
+                  content={msg.content}
+                  className="text-sm leading-relaxed"
+                />
               </div>
               {msg.role === 'user' && (
                 <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -270,7 +274,6 @@ export default function ChatPage() {
             </div>
           )}
 
-          <div ref={messagesEndRef} />
         </div>
 
         <div className="relative">

@@ -1,0 +1,115 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-animevault}
+      POSTGRES_USER: ${POSTGRES_USER:-animevault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-animevault}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-animevault}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - animevault
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - animevault
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        ENV: ${ENV:-development}
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-animevault}:${POSTGRES_PASSWORD:-animevault}@postgres:5432/${POSTGRES_DB:-animevault}
+      - REDIS_URL=redis://redis:6379/0
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-dev-secret-key-change-in-production}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+      - BGM_APP_ID=${BGM_APP_ID:-}
+      - BGM_APP_SECRET=${BGM_APP_SECRET:-}
+      - BGM_REDIRECT_URI=${BGM_REDIRECT_URI:-http://localhost:3000/auth/bgm/callback}
+      - SYNC_CONCURRENCY=${SYNC_CONCURRENCY:-8}
+      - SYNC_RATE_LIMIT=${SYNC_RATE_LIMIT:-100/min}
+    volumes:
+      - ./backend:/app
+      - backend_packages:/app/.venv
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - animevault
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        ENV: ${ENV:-development}
+    environment:
+      - VITE_API_URL=${VITE_API_URL:-/api/v1}
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      - backend
+    networks:
+      - animevault
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - frontend_dist:/usr/share/nginx/html
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - animevault
+
+volumes:
+  postgres_data:
+  redis_data:
+  backend_packages:
+  frontend_node_modules:
+  frontend_dist:
+
+networks:
+  animevault:
+    driver: bridge

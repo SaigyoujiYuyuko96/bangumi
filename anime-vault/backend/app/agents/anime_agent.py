@@ -158,7 +158,21 @@ class AnimeAgent:
         if not tool_results:
             return "抱歉，目前数据库为空或 AI 服务未配置。你可以先登录后添加收藏。"
 
-        first_result = tool_results[0].get("result", {})
+        # 关键词搜索可能一无所获，而语义检索随后补上了结果，
+        # 所以要取第一个「真有内容」的结果，而不是永远只看第一个。
+        first_result = None
+        for entry in tool_results:
+            candidate = entry.get("result")
+            if isinstance(candidate, dict):
+                if "error" not in candidate and candidate:
+                    first_result = candidate
+                    break
+            elif candidate:
+                first_result = candidate
+                break
+        if first_result is None:
+            return "抱歉，搜索结果为空。你可以换个关键词试试，或者告诉我你想看什么类型的番～"
+
         results_list = first_result if isinstance(first_result, list) else [first_result]
 
         if not results_list or (isinstance(results_list[0], dict) and "error" in results_list[0]):
@@ -293,6 +307,8 @@ class AnimeAgent:
                     tool_calls.append("search_subjects")
                 except Exception as e:
                     tool_results.append({"tool": "search_subjects", "result": {"error": str(e)}})
+            if not self._has_hits(tool_results):
+                self._append_semantic_result(message, tool_results, tool_calls)
 
         elif intent == "recommend":
             if "热门" in message or "排行" in message:
@@ -314,6 +330,8 @@ class AnimeAgent:
                     tool_calls.append("search_subjects")
                 except Exception as e:
                     tool_results.append({"tool": "search_subjects", "result": {"error": str(e)}})
+                if not self._has_hits(tool_results):
+                    self._append_semantic_result(message, tool_results, tool_calls)
 
         elif intent == "collection":
             if user_id:
@@ -373,6 +391,37 @@ class AnimeAgent:
                 "context": context,
             },
         }
+
+    def _has_hits(self, tool_results: List[Dict[str, Any]]) -> bool:
+        """判断工具结果里是否真有命中条目。
+
+        关键词搜索只匹配标题，像「催泪」「治愈」这类描述性说法必然搜不到，
+        此时需要让语义检索补上，否则降级回复只能是「搜索结果为空」。
+        """
+        if not tool_results:
+            return False
+        result = tool_results[0].get("result")
+        if isinstance(result, dict):
+            return "error" not in result and bool(result)
+        return bool(result)
+
+    def _append_semantic_result(
+        self,
+        message: str,
+        tool_results: List[Dict[str, Any]],
+        tool_calls: List[str],
+    ) -> None:
+        """把语义检索的结果追加成一次工具调用。
+
+        向量索引是可重建的缓存，可能还没建；任何异常都不能让对话失败，
+        只记录成错误结果，由降级回复统一处理。
+        """
+        try:
+            result = semantic_search.invoke({"query": message, "limit": 10})
+            tool_results.append({"tool": "semantic_search", "result": result})
+            tool_calls.append("semantic_search")
+        except Exception as e:
+            tool_results.append({"tool": "semantic_search", "result": {"error": str(e)}})
 
     def _extract_keyword(self, message: str) -> str:
         """从消息中提取搜索关键词"""

@@ -1,0 +1,40 @@
+# bgm-cli/ is a separate upstream checkout with its own git repository
+# (remote: aronnaxlin/bgm-cli). It must not be committed into this repo.
+bgm-cli/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Databases and build output
+*.db
+*.sqlite3
+anime-vault/backend/animevault.db
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Agent scratch space
+.scratch/
+
+# Stray WPS/Word documents
+*.doc
+*.docx
+~$*

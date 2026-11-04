@@ -21,6 +21,20 @@
 
 语义检索不是把标题塞进向量库就完事：一条 Subject 会被压成一个 chunk，包含标题、简介、标签、年份、制作公司、话数。索引里**只存 `bgm_id` 和向量**，命中后回关系库取真实数据——所以改了 Subject 不会留下可以被搜到的旧文本。理由写在 [ADR-0001](docs/adr/0001-retrieval-index-is-a-cache.md)。
 
+## 截图
+
+| 首页 | 番剧详情 |
+|---|---|
+| ![首页](docs/screenshots/bangumi-1-home.png) | ![详情](docs/screenshots/bangumi-2-anime-detail.png) |
+
+| 搜索 | 追番列表 |
+|---|---|
+| ![搜索](docs/screenshots/bangumi-3-search.png) | ![追番](docs/screenshots/bangumi-6-collection.png) |
+
+下面这张对话截图就是本项目的主张：问「推荐几部催泪的青春校园故事」，返回蜂蜜与四叶草、凉宫春日的消失、蜂蜜与四叶草 II——同样的话拿去关键词搜索是 0 条。
+
+![AI 助手](docs/screenshots/bangumi-5-chat-semantic.png)
+
 ## 技术栈
 
 **后端** — Python 3.12 · FastAPI 0.115 · SQLAlchemy 2.0 · Alembic · JWT 认证

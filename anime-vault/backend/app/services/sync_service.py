@@ -23,7 +23,10 @@ class SyncService:
 
     def __init__(self, db: Session):
         self.db = db
-        self.bangumi_client = BangumiClient(app_id=settings.BGM_APP_ID)
+        self.bangumi_client = BangumiClient(
+            app_id=settings.BGM_APP_ID,
+            proxy=settings.BGM_PROXY or None,
+        )
 
     async def sync_subject(self, bgm_id: int) -> Optional[AnimeSubject]:
         """同步单个条目"""
@@ -49,11 +52,28 @@ class SyncService:
 
             await self.sync_episodes(subject.id, bgm_id)
             await self.sync_characters_and_persons(subject.id, bgm_id)
+            self._reindex_subject(subject)
 
             return subject
         except Exception as e:
             self.db.rollback()
             return None
+
+    def _reindex_subject(self, subject: AnimeSubject) -> None:
+        """Refresh this Subject's entry in the semantic index.
+
+        Syncing rewrites searchable text (summary, tags), so skipping this would
+        leave search answering from the previous text -- see the ADR on the index
+        being a cache. Index failures must not fail the sync itself.
+        """
+        try:
+            from app.services.semantic_search import get_semantic_search, build_subject_text
+
+            text = build_subject_text(subject)
+            if text.strip():
+                get_semantic_search().upsert(subject.bgm_id, text)
+        except Exception:
+            pass
 
     async def sync_batch_subjects(self, bgm_ids: List[int]) -> Dict[str, int]:
         """批量同步条目"""

@@ -18,6 +18,7 @@ from app.agents.prompts import (
 )
 from app.agents.tools import (
     search_subjects,
+    semantic_search,
     get_subject_detail,
     get_trending_anime,
     get_user_collection,
@@ -53,6 +54,7 @@ class AnimeAgent:
 
         self.tools = [
             search_subjects,
+            semantic_search,
             get_subject_detail,
             get_trending_anime,
             get_user_collection,

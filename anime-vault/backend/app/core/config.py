@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     SYNC_CONCURRENCY: int = 8
     SYNC_RATE_LIMIT: str = "100/min"
 
+    # Semantic search index. It is a rebuildable cache keyed by bgm_id; see
+    # docs/adr/0001-retrieval-index-is-a-cache.md at the workspace root.
+    CHROMA_DIR: str = "./chroma_db"
+    # api.bgm.tv resets direct connections on this network, so a proxy is opted
+    # into per client instead of relying on ambient HTTP_PROXY variables.
+    BGM_PROXY: str = ""
+
     PROJECT_NAME: str = "AnimeVault"
     API_V1_PREFIX: str = "/api/v1"
 

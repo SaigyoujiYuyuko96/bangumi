@@ -325,3 +325,58 @@ def get_user_stats(user_id: int) -> Dict[str, Any]:
         return stats
     finally:
         db.close()
+
+
+@tool
+def semantic_search(query: str, limit: int = 5) -> List[Dict[str, Any]]:
+    """
+    按含义搜索动漫条目。
+
+    与 search_subjects 的区别：search_subjects 只匹配标题里的字面词，
+    这个工具匹配描述的含义。问"让人哭的动画"时，标题里没有"哭"字的条目
+    也能被找到。
+
+    参数:
+        query: 描述你想要什么，用自然语言，例如"催泪的青春校园故事"
+        limit: 返回数量限制，默认5
+
+    返回:
+        按相关度排序的条目列表，附带相关度分数（越小越相关）
+    """
+    from app.services.semantic_search import get_semantic_search
+
+    index = get_semantic_search()
+    hits = index.search(query, k=limit)
+    if not hits:
+        return []
+
+    db = SessionLocal()
+    try:
+        by_bgm_id = {h["bgm_id"]: h for h in hits}
+        subjects = (
+            db.query(AnimeSubject)
+            .filter(AnimeSubject.bgm_id.in_(list(by_bgm_id)))
+            .all()
+        )
+        # Preserve relevance order from the index; the SQL query has none.
+        order = [h["bgm_id"] for h in hits]
+        ranked = sorted(subjects, key=lambda s: order.index(s.bgm_id))
+
+        return [
+            {
+                "id": s.id,
+                "bgm_id": s.bgm_id,
+                "name": s.name,
+                "name_cn": s.name_cn,
+                "year": s.year,
+                "rating_score": s.rating_score,
+                "rating_rank": s.rating_rank,
+                "image": s.image,
+                "tags": s.tags,
+                "summary": s.summary,
+                "relevance": by_bgm_id[s.bgm_id]["distance"],
+            }
+            for s in ranked
+        ]
+    finally:
+        db.close()

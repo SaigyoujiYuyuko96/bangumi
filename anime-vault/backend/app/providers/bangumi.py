@@ -8,10 +8,23 @@ class BangumiClient:
     BASE_URL = "https://api.bgm.tv"
     PRIVATE_BASE_URL = "https://next.bgm.tv"
 
-    def __init__(self, app_id: str = "", access_token: str = ""):
+    def __init__(
+        self,
+        app_id: str = "",
+        access_token: str = "",
+        proxy: Optional[str] = None,
+        timeout: float = 30.0,
+    ):
         self.app_id = app_id
         self.access_token = access_token
-        self.client = httpx.AsyncClient(timeout=30.0)
+        self.proxy = proxy
+        # trust_env=False keeps a stray shell-level HTTP(S)_PROXY from silently
+        # hijacking these calls; the proxy is opted into per-client instead.
+        self.client = httpx.AsyncClient(
+            timeout=timeout,
+            proxy=proxy,
+            trust_env=False,
+        )
 
     async def get_subject(self, subject_id: int):
         """获取条目详情"""

@@ -8,6 +8,7 @@ from app.agents.tools import (
     get_user_collection,
     get_user_stats,
     search_subjects,
+    semantic_search,
     update_collection,
 )
 
@@ -18,6 +19,7 @@ __all__ = [
     "SYSTEM_PROMPT",
     "classify_intent",
     "search_subjects",
+    "semantic_search",
     "get_subject_detail",
     "get_trending_anime",
     "get_user_collection",

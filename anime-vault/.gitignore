@@ -56,6 +56,9 @@ logs/
 *.sqlite
 *.sqlite3
 
+# Vector index — rebuilt from the relational store by backend/scripts/reindex.py
+chroma_db/
+
 # Testing
 .coverage
 htmlcov/
